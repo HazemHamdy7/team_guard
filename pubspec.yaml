@@ -1,0 +1,16 @@
+name: team_guard
+description: A powerful custom lint plugin for Dart and Flutter that prevents the use of forbidden widgets in your team projects. Configure which widgets are not allowed and get real-time feedback.
+version: 1.0.0
+repository: https://github.com/yourusername/team_guard
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  analyzer: ^8.4.0
+  custom_lint_builder: ^0.8.1
+  yaml: ^3.1.2
+
+dev_dependencies:
+  custom_lint: ^0.8.1
+  lints: ^5.1.1
