@@ -1,3 +1,7 @@
+## 1.0.3
+
+- Clarify `import` field format in docs/config template: use package path only (not a Dart `import '...';` statement).
+
 ## 1.0.2
 
 - Rewrite README with complete setup steps, correct team_guard.yaml configuration, and troubleshooting for IDE visibility/generation.
