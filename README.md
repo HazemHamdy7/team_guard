@@ -49,7 +49,13 @@ custom_lint:
           - 'Padding'
 ```
 
-3. The linter will automatically check your code and highlight any usage of forbidden widgets
+3. Run custom lint:
+
+```bash
+dart run custom_lint
+```
+
+4. The linter will automatically check your code and highlight any usage of forbidden widgets
 
 ### Example
 
