@@ -81,6 +81,28 @@ classes:
     severity: warning
 ```
 
+### Import Field Format
+
+`import` in `team_guard.yaml` must be a package path only.
+
+Correct:
+
+```yaml
+import: package:your_app/widgets/custom_text.dart
+```
+
+or
+
+```yaml
+import: "package:your_app/widgets/custom_text.dart"
+```
+
+Wrong:
+
+```yaml
+import: "import 'package:your_app/widgets/custom_text.dart';"
+```
+
 ### Severity Values
 
 - `info`

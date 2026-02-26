@@ -135,12 +135,14 @@ class WidgetGuardConfig {
 widgets:
   Text:
     replacement: CustomText
+    # import must be a package path only (no Dart import statement).
     # import: package:your_app/custom_text.dart
     severity: warning
 
 classes:
   Colors:
     replacement: AppColors
+    # import must be a package path only (no Dart import statement).
     # import: package:your_app/app_colors.dart
     severity: warning
 ''';
