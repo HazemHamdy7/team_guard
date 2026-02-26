@@ -1,87 +1,129 @@
 # Team Guard
 
-A powerful custom lint plugin for Dart and Flutter that helps your team enforce coding standards by preventing the use of forbidden widgets in your projects.
+A custom lint plugin for Dart and Flutter that helps teams enforce UI rules by blocking specific widgets/classes and suggesting approved replacements.
 
 ## Features
 
-- ✨ **Custom Lint Integration**: Seamlessly integrates with `custom_lint` to provide real-time feedback in your IDE
-- 🚫 **Forbidden Widget Detection**: Easily configure and block the usage of specific widgets
-- 🔧 **Flexible Configuration**: Control which widgets are forbidden through YAML configuration
-- 📊 **Automatic Code Analysis**: Runs during static analysis and provides clear error messages
-- 🎯 **Developer-Friendly**: Clear and actionable lint rule suggestions
+- Integrates with `custom_lint` for live IDE feedback.
+- Supports configurable restrictions for both widgets and classes.
+- Supports `info`, `warning`, and `error` severities per rule.
+- Provides quick-fix suggestions with replacement names/imports.
 
-## Getting started
+## Prerequisites
 
-### Prerequisites
+- Dart SDK `>=3.3.0 <4.0.0`
+- `custom_lint` installed in the target project
+- IDE plugin:
+  - VS Code: `Custom Lint`
+  - Android Studio / IntelliJ: `Custom Lint`
 
-- Dart SDK >= 3.3.0
-- Custom Lint plugin installed
+## Installation
 
-### Installation
-
-Add `team_guard` to your `pubspec.yaml`:
+Add dependencies to your app's `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  team_guard: ^1.0.0
+  team_guard: ^1.0.1
   custom_lint: ^0.8.1
 ```
 
 Then run:
 
 ```bash
-dart pub get
-# or for Flutter
+# Flutter project
 flutter pub get
+
+# Dart project
+dart pub get
 ```
 
-## Usage
+## Setup (Required)
 
-1. Add `team_guard` to your dev dependencies
-2. Configure forbidden widgets in your `pubspec.yaml`:
+1. Enable `custom_lint` in `analysis_options.yaml`:
 
 ```yaml
-custom_lint:
-  rules:
-    - forbidden_widget:
-        forbidden_widgets:
-          - 'GestureDetector'
-          - 'Padding'
+analyzer:
+  plugins:
+    - custom_lint
 ```
 
-3. Run custom lint:
+2. Run the linter:
 
 ```bash
 dart run custom_lint
 ```
 
-4. The linter will automatically check your code and highlight any usage of forbidden widgets
+3. Team Guard reads (and may create) a config file in project root:
 
-### Example
+`team_guard.yaml`
 
-If you forbid `GestureDetector`, the following code:
+If the file is not generated automatically, create it manually (example below).
 
-```dart
-GestureDetector(
-  onTap: () {},
-  child: Text('Click me'),
-)
+## Configuration
+
+Create `team_guard.yaml` in your project root:
+
+```yaml
+widgets:
+  Text:
+    replacement: CustomText
+    # import: package:your_app/widgets/custom_text.dart
+    severity: warning
+
+  GestureDetector:
+    replacement: AppGestureDetector
+    severity: error
+
+classes:
+  Colors:
+    replacement: AppColors
+    # import: package:your_app/theme/app_colors.dart
+    severity: warning
 ```
 
-Will produce a lint error with a helpful message and suggestions for alternatives.
+### Severity Values
 
-## How it works
+- `info`
+- `warning`
+- `error`
 
-Widget Guard uses Dart's analyzer to scan your code and detect instantiations of forbidden widgets. It provides:
+Use `error` if you want violations to appear as red errors in IDE problems.
 
-- **Error Descriptions**: Clear explanation of why the widget is forbidden
-- **Suggestions**: Recommendations for alternative widgets to use
-- **Location Info**: Exact file and line number of the offending code
+## Example Violation
 
-## Additional information
+If `Text` is restricted:
 
-For more information about custom_lint, see the [custom_lint documentation](https://pub.dev/packages/custom_lint).
+```dart
+Text('Hello');
+```
 
-For issues, feature requests, or contributions, feel free to open an issue on the GitHub repository.
+You will get a lint message suggesting `CustomText` instead.
 
-For more information, see: https://pub.dev/packages/team_guard
+## Troubleshooting
+
+### Lints appear in terminal but not in IDE
+
+1. Confirm `analysis_options.yaml` contains:
+
+```yaml
+analyzer:
+  plugins:
+    - custom_lint
+```
+
+2. Install IDE plugin `Custom Lint`.
+3. Restart analysis:
+   - VS Code: `Dart: Restart Analysis Server`
+   - Android Studio/IntelliJ: restart IDE
+4. Check Problems filter is not set to errors-only if your rules are `warning`.
+
+### `team_guard.yaml` was not generated
+
+- Run `dart run custom_lint` from the project root.
+- If still missing, create `team_guard.yaml` manually using the example above.
+
+## Additional Information
+
+- Package: https://pub.dev/packages/team_guard
+- custom_lint docs: https://pub.dev/packages/custom_lint
+- Issues and contributions: https://github.com/HazemHamdy7/team_guard
