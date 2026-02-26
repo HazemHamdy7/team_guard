@@ -23,7 +23,7 @@ class WidgetGuardConfig {
   });
 
   static WidgetGuardConfig load(String startPath) {
-    final file = _findConfigFile(startPath) ?? _createDefaultConfig(startPath);
+    final file = ensureConfigFile(startPath);
 
     if (file == null || !file.existsSync()) {
       return WidgetGuardConfig(widgets: {}, classes: {});
@@ -41,6 +41,10 @@ class WidgetGuardConfig {
       widgets: widgets,
       classes: classes,
     );
+  }
+
+  static File? ensureConfigFile(String startPath) {
+    return _findConfigFile(startPath) ?? _createDefaultConfig(startPath);
   }
 
   static File? _createDefaultConfig(String startPath) {

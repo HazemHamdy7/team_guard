@@ -1,41 +1,54 @@
-// Example configuration for Team Guard
-// 
-// This example shows how to configure Widget Guard in your project's pubspec.yaml
-// to prevent the use of certain widgets.
-
-// In your pubspec.yaml, add the following configuration:
-//
-// dev_dependencies:
-//   team_guard: ^1.0.0
-//   custom_lint: ^0.8.1
-//
-// custom_lint:
-//   rules:
-//     - forbidden_widget:
-//         forbidden_widgets:
-//           - name: GestureDetector
-//             replacement: MyCustomGestureDetector
-//             severity: error
-//           - name: Padding
-//             replacement: MyCustomPadding
-//             severity: warning
-
-// Example: If you forbidden GestureDetector, this code will trigger an error:
-// 
-// ❌ FORBIDDEN:
-// Widget buildButton() {
-//   return GestureDetector(
-//     onTap: () => print('Tapped'),
-//     child: Text('Click me'),
-//   );
-// }
-//
-// ✅ ALLOWED (Using replacement):
-// Widget buildButton() {
-//   return MyCustomGestureDetector(
-//     onTap: () => print('Tapped'),
-//     child: Text('Click me'),
-//   );
-// }
-
-// For more information, see: https://pub.dev/packages/team_guard
+/// Team Guard setup example.
+///
+/// 1) Add dependencies:
+///
+/// ```yaml
+/// dev_dependencies:
+///   team_guard: ^1.0.3
+///   custom_lint: ^0.8.1
+/// ```
+///
+/// 2) Install packages:
+///
+/// ```bash
+/// flutter pub get
+/// # or
+/// dart pub get
+/// ```
+///
+/// 3) Initialize Team Guard:
+///
+/// ```bash
+/// dart run team_guard:init
+/// ```
+///
+/// 4) Example `team_guard.yaml`:
+///
+/// ```yaml
+/// widgets:
+///   Text:
+///     replacement: CustomText
+///     import: package:your_app/widgets/custom_text.dart
+///     severity: warning
+///
+///   GestureDetector:
+///     replacement: AppGestureDetector
+///     severity: error
+///
+/// classes:
+///   Colors:
+///     replacement: AppColors
+///     import: package:your_app/theme/app_colors.dart
+///     severity: warning
+/// ```
+///
+/// 5) Run lint:
+///
+/// ```bash
+/// dart run custom_lint
+/// ```
+///
+/// Notes:
+/// - In `team_guard.yaml`, `import` value is a package path only.
+/// - Do not write: `import 'package:...';`
+void main() {}

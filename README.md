@@ -23,7 +23,7 @@ Add dependencies to your app's `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  team_guard: ^1.0.1
+  team_guard: ^1.0.3
   custom_lint: ^0.8.1
 ```
 
@@ -39,13 +39,16 @@ dart pub get
 
 ## Setup (Required)
 
-1. Enable `custom_lint` in `analysis_options.yaml`:
+1. Initialize Team Guard in your project root:
 
-```yaml
-analyzer:
-  plugins:
-    - custom_lint
+```bash
+dart run team_guard:init
 ```
+
+This command:
+- creates `team_guard.yaml` if missing
+- creates `analysis_options.yaml` if missing
+- adds `custom_lint` plugin under `analyzer.plugins` if missing
 
 2. Run the linter:
 
@@ -53,11 +56,7 @@ analyzer:
 dart run custom_lint
 ```
 
-3. Team Guard reads (and may create) a config file in project root:
-
-`team_guard.yaml`
-
-If the file is not generated automatically, create it manually (example below).
+3. If your IDE still does not show lints, restart analysis server/IDE.
 
 ## Configuration
 
@@ -80,6 +79,8 @@ classes:
     # import: package:your_app/theme/app_colors.dart
     severity: warning
 ```
+
+Full setup example: [`example/team_guard_example.dart`](example/team_guard_example.dart)
 
 ### Import Field Format
 
