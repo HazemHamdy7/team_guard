@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart' show ClassDeclaration;
-import 'package:analyzer/error/error.dart' show ErrorSeverity;
-import 'package:analyzer/error/listener.dart';
+import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
+import 'package:analyzer/error/listener.dart' show DiagnosticReporter;
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 import 'config_loader.dart';
@@ -14,21 +14,21 @@ class ForbiddenWidgetRule extends DartLintRule {
   static const _errorCode = LintCode(
     name: 'team_guard.forbidden_widget',
     problemMessage: '{0}',
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.ERROR,
     uniqueName: 'team_guard.forbidden_widget.error',
   );
 
   static const _warningCode = LintCode(
     name: 'team_guard.forbidden_widget',
     problemMessage: '{0}',
-    errorSeverity: ErrorSeverity.WARNING,
+    errorSeverity: DiagnosticSeverity.WARNING,
     uniqueName: 'team_guard.forbidden_widget.warning',
   );
 
   static const _infoCode = LintCode(
     name: 'team_guard.forbidden_widget',
     problemMessage: '{0}',
-    errorSeverity: ErrorSeverity.INFO,
+    errorSeverity: DiagnosticSeverity.INFO,
     uniqueName: 'team_guard.forbidden_widget.info',
   );
 
@@ -38,7 +38,7 @@ class ForbiddenWidgetRule extends DartLintRule {
   @override
   void run(
     CustomLintResolver resolver,
-    ErrorReporter reporter,
+    DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
     final root = Directory(resolver.source.fullName).parent.parent.path;
@@ -47,7 +47,7 @@ class ForbiddenWidgetRule extends DartLintRule {
 
     context.registry.addInstanceCreationExpression((node) {
       final typeNode = node.constructorName.type;
-      final widgetName = typeNode.name2.lexeme;
+      final widgetName = typeNode.name.lexeme;
 
       final restriction = config.widgets[widgetName];
       if (restriction == null) return;
@@ -63,7 +63,7 @@ class ForbiddenWidgetRule extends DartLintRule {
 
       final message =
           '$widgetName is restricted. A custom class is available: $replacement. Use it instead.';
-      final nameToken = typeNode.name2;
+      final nameToken = typeNode.name;
       final lintCode = _codeForSeverity(restriction.severity);
 
       reporter.atToken(

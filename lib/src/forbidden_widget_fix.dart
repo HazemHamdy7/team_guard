@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:analyzer/dart/ast/ast.dart' show ClassDeclaration;
-import 'package:analyzer/error/error.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'config_loader.dart';
 
@@ -10,23 +9,24 @@ class ForbiddenWidgetFix extends DartFix {
     CustomLintResolver resolver,
     ChangeReporter reporter,
     CustomLintContext context,
-    AnalysisError analysisError,
-    List<AnalysisError> others,
+    Object analysisError,
+    List<Object> others,
   ) {
     final root = Directory(resolver.source.fullName).parent.parent.path;
 
     final config = WidgetGuardConfig.load(root);
+    final diagnostic = analysisError as dynamic;
 
     context.registry.addInstanceCreationExpression((node) {
       final typeNode = node.constructorName.type;
-      final nameToken = typeNode.name2;
+      final nameToken = typeNode.name;
       final widgetName = nameToken.lexeme;
 
       final restriction = config.widgets[widgetName];
       if (restriction == null) return;
 
-      final matchesCurrentError = analysisError.offset == nameToken.offset &&
-          analysisError.length == nameToken.length;
+      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
+          diagnostic.length == nameToken.length;
       if (!matchesCurrentError) return;
 
       final replacement = restriction.replacement;
@@ -62,8 +62,8 @@ class ForbiddenWidgetFix extends DartFix {
       if (restriction == null) return;
 
       final nameToken = node.prefix.token;
-      final matchesCurrentError = analysisError.offset == nameToken.offset &&
-          analysisError.length == nameToken.length;
+      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
+          diagnostic.length == nameToken.length;
       if (!matchesCurrentError) return;
 
       final replacement = restriction.replacement;
