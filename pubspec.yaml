@@ -1,6 +1,6 @@
 name: team_guard
 description: Custom lint plugin to block forbidden Flutter widgets across team projects.
-version: 1.0.4
+version: 1.0.5
 repository: https://github.com/HazemHamdy7/team_guard
 
 environment:

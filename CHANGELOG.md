@@ -1,3 +1,11 @@
+## 1.0.5
+
+- Improve pub score compliance:
+  - Add Dartdoc for public API entrypoints.
+  - Shorten package description in `pubspec.yaml`.
+  - Replace deprecated analyzer API usage in lint/fix implementation.
+- Broaden analyzer compatibility constraint to `>=8.4.0 <12.0.0`.
+
 ## 1.0.4
 
 - Add `dart run team_guard:init` command to generate `team_guard.yaml` directly.
