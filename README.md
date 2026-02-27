@@ -23,7 +23,7 @@ Add dependencies to your app's `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  team_guard: ^1.0.3
+  team_guard: ^1.0.6
   custom_lint: ^0.8.1
 ```
 
@@ -67,7 +67,7 @@ widgets:
   Text:
     replacement: CustomText
     # import: package:your_app/widgets/custom_text.dart
-    severity: warning
+    severity: error
 
   GestureDetector:
     replacement: AppGestureDetector
@@ -77,7 +77,7 @@ classes:
   Colors:
     replacement: AppColors
     # import: package:your_app/theme/app_colors.dart
-    severity: warning
+    severity: error
 ```
 
 Full setup example: [`example/team_guard_example.dart`](example/team_guard_example.dart)

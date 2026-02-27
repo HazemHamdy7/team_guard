@@ -1,3 +1,8 @@
+## 1.0.6
+
+- Update docs and examples to use `severity: error` by default.
+- Update generated default `team_guard.yaml` template to use `severity: error`.
+
 ## 1.0.5
 
 - Improve pub score compliance:

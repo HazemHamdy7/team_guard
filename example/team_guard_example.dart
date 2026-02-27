@@ -29,7 +29,7 @@
 ///   Text:
 ///     replacement: CustomText
 ///     import: package:your_app/widgets/custom_text.dart
-///     severity: warning
+///     severity: error
 ///
 ///   GestureDetector:
 ///     replacement: AppGestureDetector
@@ -39,7 +39,7 @@
 ///   Colors:
 ///     replacement: AppColors
 ///     import: package:your_app/theme/app_colors.dart
-///     severity: warning
+///     severity: error
 /// ```
 ///
 /// 5) Run lint:
