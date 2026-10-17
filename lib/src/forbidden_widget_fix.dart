@@ -1,8 +1,22 @@
 import 'dart:io';
 import 'package:analyzer/dart/ast/ast.dart'
-    show ClassDeclaration, ConstructorName, NamedType;
+    show ClassDeclaration, ConstructorName, NamedType, PrefixedIdentifier;
+import 'package:analyzer/dart/element/element.dart' show InterfaceElement;
+import 'package:analyzer/source/source_range.dart' show SourceRange;
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'config_loader.dart';
+
+class _FileReplacement {
+  final SourceRange sourceRange;
+  final String replacement;
+  final String? importPath;
+
+  _FileReplacement({
+    required this.sourceRange,
+    required this.replacement,
+    this.importPath,
+  });
+}
 
 class ForbiddenWidgetFix extends DartFix {
   static final Map<String, String?> _autoImportCache = {};
@@ -15,37 +29,74 @@ class ForbiddenWidgetFix extends DartFix {
     Object analysisError,
     List<Object> others,
   ) {
-    final root = Directory(resolver.source.fullName).parent.parent.path;
-    final config = WidgetGuardConfig.load(root);
-    final projectRoot = _findProjectRoot(resolver.source.fullName) ?? root;
+    final projectRoot =
+        _findProjectRoot(resolver.path) ?? File(resolver.path).parent.path;
+    final config = WidgetGuardConfig.load(projectRoot);
     final packageName = _readPackageName(projectRoot);
     final diagnostic = analysisError as dynamic;
+
+    final allReplacements = <_FileReplacement>[];
+    final seenOffsets = <int>{};
+
+    void recordReplacement({
+      required SourceRange range,
+      required String replacement,
+      required String? importPath,
+    }) {
+      if (seenOffsets.add(range.offset)) {
+        allReplacements.add(
+          _FileReplacement(
+            sourceRange: range,
+            replacement: replacement,
+            importPath: importPath,
+          ),
+        );
+      }
+    }
 
     context.registry.addInstanceCreationExpression((node) {
       final typeNode = node.constructorName.type;
       final nameToken = typeNode.name;
       final symbolName = nameToken.lexeme;
 
-      final restriction = config.restrictionForSymbol(symbolName);
+      final widgetRestriction = config.restrictionForWidget(symbolName);
+      final classRestriction = config.restrictionForClass(symbolName);
+      final restriction = widgetRestriction ?? classRestriction;
       if (restriction == null) return;
 
-      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
-          diagnostic.length == nameToken.length;
-      if (!matchesCurrentError) return;
+      final constructorElem = node.constructorName.element;
+      final interfaceElem = (constructorElem?.enclosingElement ??
+          typeNode.element) as InterfaceElement?;
+      if (widgetRestriction != null &&
+          interfaceElem != null &&
+          !_isFlutterWidget(interfaceElem)) {
+        return;
+      }
 
       final replacement = restriction.replacement;
-      final importPath = _resolveImportPath(
-        explicitImport: restriction.import,
-        replacement: replacement,
-        projectRoot: projectRoot,
-        packageName: packageName,
-      );
       final enclosingClassName =
           node.thisOrAncestorOfType<ClassDeclaration>()?.name.lexeme;
 
       if (enclosingClassName == replacement) {
         return;
       }
+
+      final importPath = _resolveImportPath(
+        explicitImport: restriction.import,
+        replacement: replacement,
+        projectRoot: projectRoot,
+        packageName: packageName,
+      );
+
+      recordReplacement(
+        range: typeNode.sourceRange,
+        replacement: replacement,
+        importPath: importPath,
+      );
+
+      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
+          diagnostic.length == nameToken.length;
+      if (!matchesCurrentError) return;
 
       final changeBuilder = reporter.createChangeBuilder(
         message: 'Use $replacement',
@@ -63,26 +114,44 @@ class ForbiddenWidgetFix extends DartFix {
         );
       });
     });
+
     context.registry.addPrefixedIdentifier((node) {
-      final className = node.prefix.name;
-      final restriction = config.restrictionForSymbol(className);
+      final prefixElement = node.prefix.element;
+      if (prefixElement is! InterfaceElement) return;
+
+      final className = prefixElement.name;
+      if (className == null) return;
+
+      final restriction = config.restrictionForClass(className) ??
+          config.restrictionForWidget(className);
       if (restriction == null) return;
 
-      final nameToken = node.prefix.token;
-      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
-          diagnostic.length == nameToken.length;
-      if (!matchesCurrentError) return;
+      if (config.isWidget(className) && !_isFlutterWidget(prefixElement)) {
+        return;
+      }
 
       final replacement = restriction.replacement;
+      final enclosingClassName =
+          node.thisOrAncestorOfType<ClassDeclaration>()?.name.lexeme;
+      if (enclosingClassName == replacement) return;
+
       final importPath = _resolveImportPath(
         explicitImport: restriction.import,
         replacement: replacement,
         projectRoot: projectRoot,
         packageName: packageName,
       );
-      final enclosingClassName =
-          node.thisOrAncestorOfType<ClassDeclaration>()?.name.lexeme;
-      if (enclosingClassName == replacement) return;
+
+      recordReplacement(
+        range: node.prefix.sourceRange,
+        replacement: replacement,
+        importPath: importPath,
+      );
+
+      final nameToken = node.prefix.token;
+      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
+          diagnostic.length == nameToken.length;
+      if (!matchesCurrentError) return;
 
       final changeBuilder = reporter.createChangeBuilder(
         message: 'Use $replacement',
@@ -101,6 +170,64 @@ class ForbiddenWidgetFix extends DartFix {
       });
     });
 
+    context.registry.addPropertyAccess((node) {
+      final target = node.target;
+      if (target is! PrefixedIdentifier) return;
+
+      final targetElem = target.identifier.element;
+      if (targetElem is! InterfaceElement) return;
+
+      final className = targetElem.name;
+      if (className == null) return;
+
+      final restriction = config.restrictionForClass(className) ??
+          config.restrictionForWidget(className);
+      if (restriction == null) return;
+
+      if (config.isWidget(className) && !_isFlutterWidget(targetElem)) {
+        return;
+      }
+
+      final replacement = restriction.replacement;
+      final enclosingClassName =
+          node.thisOrAncestorOfType<ClassDeclaration>()?.name.lexeme;
+      if (enclosingClassName == replacement) return;
+
+      final importPath = _resolveImportPath(
+        explicitImport: restriction.import,
+        replacement: replacement,
+        projectRoot: projectRoot,
+        packageName: packageName,
+      );
+
+      recordReplacement(
+        range: target.sourceRange,
+        replacement: replacement,
+        importPath: importPath,
+      );
+
+      final nameToken = target.identifier.token;
+      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
+          diagnostic.length == nameToken.length;
+      if (!matchesCurrentError) return;
+
+      final changeBuilder = reporter.createChangeBuilder(
+        message: 'Use $replacement',
+        priority: 1,
+      );
+
+      changeBuilder.addDartFileEdit((builder) {
+        if (importPath != null && importPath.isNotEmpty) {
+          builder.importLibrary(Uri.parse(importPath));
+        }
+
+        builder.addSimpleReplacement(
+          target.sourceRange,
+          replacement,
+        );
+      });
+    });
+
     context.registry.addNamedType((node) {
       if (_isConstructorType(node)) {
         // Already handled by instance creation fix.
@@ -109,23 +236,39 @@ class ForbiddenWidgetFix extends DartFix {
 
       final nameToken = node.name;
       final symbolName = nameToken.lexeme;
-      final restriction = config.restrictionForSymbol(symbolName);
+      final widgetRestriction = config.restrictionForWidget(symbolName);
+      final classRestriction = config.restrictionForClass(symbolName);
+      final restriction = widgetRestriction ?? classRestriction;
       if (restriction == null) return;
 
-      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
-          diagnostic.length == nameToken.length;
-      if (!matchesCurrentError) return;
+      final elem = node.element;
+      if (elem is InterfaceElement &&
+          widgetRestriction != null &&
+          !_isFlutterWidget(elem)) {
+        return;
+      }
 
       final replacement = restriction.replacement;
+      final enclosingClassName =
+          node.thisOrAncestorOfType<ClassDeclaration>()?.name.lexeme;
+      if (enclosingClassName == replacement) return;
+
       final importPath = _resolveImportPath(
         explicitImport: restriction.import,
         replacement: replacement,
         projectRoot: projectRoot,
         packageName: packageName,
       );
-      final enclosingClassName =
-          node.thisOrAncestorOfType<ClassDeclaration>()?.name.lexeme;
-      if (enclosingClassName == replacement) return;
+
+      recordReplacement(
+        range: node.name.sourceRange,
+        replacement: replacement,
+        importPath: importPath,
+      );
+
+      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
+          diagnostic.length == nameToken.length;
+      if (!matchesCurrentError) return;
 
       final changeBuilder = reporter.createChangeBuilder(
         message: 'Use $replacement',
@@ -143,6 +286,73 @@ class ForbiddenWidgetFix extends DartFix {
         );
       });
     });
+
+    context.registry.addMethodInvocation((node) {
+      // Top-level function invocations (e.g. print(...)) have no target.
+      if (node.target != null) return;
+
+      final functionName = node.methodName.name;
+      final restriction = config.restrictionForFunction(functionName);
+      if (restriction == null) return;
+
+      final replacement = restriction.replacement;
+      final importPath = _resolveImportPath(
+        explicitImport: restriction.import,
+        replacement: replacement,
+        projectRoot: projectRoot,
+        packageName: packageName,
+      );
+
+      recordReplacement(
+        range: node.methodName.sourceRange,
+        replacement: replacement,
+        importPath: importPath,
+      );
+
+      final nameToken = node.methodName.token;
+      final matchesCurrentError = diagnostic.offset == nameToken.offset &&
+          diagnostic.length == nameToken.length;
+      if (!matchesCurrentError) return;
+
+      final changeBuilder = reporter.createChangeBuilder(
+        message: 'Use $replacement',
+        priority: 1,
+      );
+
+      changeBuilder.addDartFileEdit((builder) {
+        if (importPath != null && importPath.isNotEmpty) {
+          builder.importLibrary(Uri.parse(importPath));
+        }
+
+        builder.addSimpleReplacement(
+          node.methodName.sourceRange,
+          replacement,
+        );
+      });
+    });
+
+    context.addPostRunCallback(() {
+      if (allReplacements.length > 1) {
+        final changeBuilder = reporter.createChangeBuilder(
+          message: 'Fix all forbidden widgets in this file',
+          priority: 0,
+        );
+
+        changeBuilder.addDartFileEdit((builder) {
+          final sortedReplacements = List<_FileReplacement>.from(
+              allReplacements)
+            ..sort(
+                (a, b) => b.sourceRange.offset.compareTo(a.sourceRange.offset));
+
+          for (final rep in sortedReplacements) {
+            if (rep.importPath != null && rep.importPath!.isNotEmpty) {
+              builder.importLibrary(Uri.parse(rep.importPath!));
+            }
+            builder.addSimpleReplacement(rep.sourceRange, rep.replacement);
+          }
+        });
+      }
+    });
   }
 
   String? _resolveImportPath({
@@ -154,6 +364,10 @@ class ForbiddenWidgetFix extends DartFix {
     final normalizedExplicit = _normalizeImportPath(explicitImport);
     if (normalizedExplicit != null) {
       return normalizedExplicit;
+    }
+
+    if (replacement == 'debugPrint') {
+      return 'package:flutter/foundation.dart';
     }
 
     if (packageName == null || packageName.isEmpty) {
@@ -220,7 +434,12 @@ class ForbiddenWidgetFix extends DartFix {
     final matchedImports = <String>[];
 
     for (final entity in libDir.listSync(recursive: true, followLinks: false)) {
-      if (entity is! File || !entity.path.endsWith('.dart')) {
+      if (entity is! File ||
+          !entity.path.endsWith('.dart') ||
+          entity.path.endsWith('.g.dart') ||
+          entity.path.endsWith('.freezed.dart') ||
+          entity.path.endsWith('.mocks.dart') ||
+          entity.path.endsWith('.gen.dart')) {
         continue;
       }
 
@@ -249,21 +468,23 @@ class ForbiddenWidgetFix extends DartFix {
   }
 
   String? _findProjectRoot(String sourcePath) {
-    var current = File(sourcePath).parent.absolute;
+    var entity = FileSystemEntity.isDirectorySync(sourcePath)
+        ? Directory(sourcePath).absolute
+        : File(sourcePath).parent.absolute;
 
     while (true) {
       final pubspec = File(
-        '${current.path}${Platform.pathSeparator}pubspec.yaml',
+        '${entity.path}${Platform.pathSeparator}pubspec.yaml',
       );
       if (pubspec.existsSync()) {
-        return current.path;
+        return entity.path;
       }
 
-      final parent = current.parent;
-      if (parent.path == current.path) {
+      final parent = entity.parent;
+      if (parent.path == entity.path) {
         return null;
       }
-      current = parent;
+      entity = parent;
     }
   }
 
@@ -287,5 +508,26 @@ class ForbiddenWidgetFix extends DartFix {
     }
 
     return null;
+  }
+
+  static bool _isFlutterWidget(InterfaceElement element) {
+    if (_isFromFlutter(element.library.uri)) {
+      return true;
+    }
+    return element.allSupertypes.any((supertype) {
+      final name = supertype.element.name;
+      return (name == 'Widget' ||
+              name == 'StatelessWidget' ||
+              name == 'StatefulWidget' ||
+              name == 'InheritedWidget' ||
+              name == 'RenderObjectWidget') &&
+          _isFromFlutter(supertype.element.library.uri);
+    });
+  }
+
+  static bool _isFromFlutter(Uri uri) {
+    return uri.scheme == 'package' &&
+        uri.pathSegments.isNotEmpty &&
+        uri.pathSegments.first == 'flutter';
   }
 }

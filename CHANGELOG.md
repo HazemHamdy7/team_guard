@@ -1,3 +1,20 @@
+## 1.0.18
+
+- **Fast Inspection CLI (`dart run team_guard:check`)**: Instantly audit the entire codebase and print a formatted ASCII table of forbidden elements, lines, approved replacements, and severity levels.
+- **Bulk Automated Migration CLI (`dart run team_guard:migrate`)**: Automatically replace forbidden widgets with approved replacements across all files with automatic import addition and `--dry-run` preview support.
+- **Setup Diagnostics CLI (`dart run team_guard:doctor`)**: Health check tool that validates `team_guard.yaml` syntax, `analysis_options.yaml` plugins, dependencies, and verifies that replacement classes exist.
+- **Batch Quick Fix in IDE ("Fix all in file")**: One-click quick fix option in IDE to fix all forbidden widgets in the current file simultaneously.
+- **Custom Policy Reasons**: Support `reason` property in `team_guard.yaml` to explain why a widget, class, or function is restricted directly in IDE problem messages.
+- **Function Restrictions (`print` -> `debugPrint`)**: Support restricting top-level functions such as `print` with `warning` severity and automated Quick Fix to `debugPrint`.
+- **Fix Bug A (False-positive `text` detection)**: Prevent false-positive detections on lowercase variables, parameters, fields, methods, comments, and strings named `text` by enforcing AST element resolution and case-sensitive identifier checks.
+- **Fix Bug B (PDF package compatibility)**: Full compatibility with PDF-generation packages (e.g. `package:pdf/widgets.dart`) by verifying that guarded UI widgets resolve to genuine Flutter framework widgets (`package:flutter`).
+- **Enhanced Quick Fix**: Reliably replace restricted widgets and add approved replacement imports in a single action, prevent duplicate imports when the import already exists, and preserve all widget arguments and children.
+- **Prefix & Aliased Access**: Accurately detect prefixed accesses such as `fl.Colors.red` and replace aliased widgets cleanly.
+- **Safe Generated File Handling**: Automatically skip analysis on generated files (`.g.dart`, `.freezed.dart`, `.mocks.dart`, `.gen.dart`, and `.dart_tool`).
+- **Guard Configuration Validation**: Gracefully handle missing or malformed `team_guard.yaml` files and report clear, actionable diagnostics for invalid entries or severity settings.
+- **Unified CLI Router (`dart run team_guard <command>`)**: Run `check`, `migrate`, `doctor`, `init`, and `setup` through standard subcommands.
+- **Comprehensive Test Suite**: 34 automated regression, unit, and integration tests ensuring 100% test pass rate.
+
 ## 1.0.17
 
 - Simplify README setup instructions to use `dart run team_guard:setup` as the primary command instead of documenting separate init/lint commands.

@@ -30,5 +30,7 @@ include: package:lints/recommended.yaml
 # https://dart.dev/guides/language/analysis-options
 
 analyzer:
+  errors:
+    analysis_options_deprecated_plugins: ignore
   plugins:
     - custom_lint

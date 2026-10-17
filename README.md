@@ -1,255 +1,238 @@
 # Team Guard
 
-A custom lint plugin for Dart and Flutter that helps teams enforce UI rules by blocking specific widgets/classes and suggesting approved replacements.
+A custom lint and architecture enforcement plugin for Dart & Flutter that protects codebases against forbidden widgets, classes, and functions — keeping codebases clean, consistent, and scalable.
 
-## Features
+---
 
-- Integrates with `custom_lint` for live IDE feedback.
-- Supports configurable restrictions for both widgets and classes.
-- Class restrictions are enforced for both prefixed access (for example `Colors.red`) and constructor usage (for example `Color(...)`).
-- Supports `warning` and `error` severities per rule.
-- Provides quick-fix suggestions with replacement names/imports.
-- Scaffolds Flutter-friendly starter files for common replacements such as text widgets and color classes.
+## ⚡ First Step After Installation: Scan Your Codebase
 
-## Prerequisites
+Right after adding `team_guard`, audit your entire codebase with one command to instantly see where forbidden widgets are used and what approved replacements should be used:
 
-- Dart SDK `>=3.0.0 <4.0.0`
-- IDE plugin:
-  - VS Code: `Custom Lint`
-  - Android Studio / IntelliJ: `Custom Lint`
+```bash
+dart run team_guard:check
+# or: dart run team_guard check
+```
 
-## Installation
+**Output:**
 
-Add dependencies to your app's `pubspec.yaml`:
+```text
+Scanning project for restricted widgets & elements...
+
+┌──────────────────────────────────────┬──────┬──────────────┬──────────────────┬──────────┐
+│ File                                 │ Line │ Restricted   │ Replacement      │ Severity │
+├──────────────────────────────────────┼──────┼──────────────┼──────────────────┼──────────┤
+│ lib/features/home/presentation.dart  │ 24   │ Text         │ CustomText       │ ERROR    │
+│ lib/features/home/presentation.dart  │ 48   │ Colors       │ AppColors        │ ERROR    │
+│ lib/core/network/api_client.dart     │ 15   │ print        │ debugPrint       │ WARNING  │
+└──────────────────────────────────────┴──────┴──────────────┴──────────────────┴──────────┘
+
+Found 3 violation(s).
+💡 Tip: Run "dart run team_guard:migrate" to automatically fix these violations!
+```
+
+---
+
+## 🚀 Key Features
+
+- **Instant Audit Table (`dart run team_guard:check`)**: Terminal inspection table listing file, line, restricted element, approved replacement, and severity.
+- **Bulk Automated Migration (`dart run team_guard:migrate`)**: One command fixes all violations across your entire project, adds required imports, and preserves all arguments (with `--dry-run` preview support).
+- **Setup Diagnostics (`dart run team_guard:doctor`)**: Diagnoses and verifies your `team_guard.yaml`, dependencies, `analysis_options.yaml`, and replacement symbols.
+- **One-Click Quick Fix in IDE**: Replaces forbidden widgets, adds approved imports automatically, prevents duplicate imports, and preserves multiline arguments and child trees.
+- **"Fix all in file" Batch Quick Fix**: Fix every forbidden widget in the open file in a single click from your IDE.
+- **Custom Policy Reasons**: Define a custom `reason` for each restriction so team members immediately understand *why* a widget or function is restricted.
+- **Function & Method Restrictions**: Restrict functions such as `print` in favor of `debugPrint` or your logger with `warning` or `error` severity.
+- **Accurate Widget Detection**: Semantic analysis ensures genuine Flutter widgets are targeted — ordinary variables (e.g. `final String text`), properties (`text.length`), methods (`extractText()`), and comments are never falsely flagged.
+- **PDF Generation Compatible**: Works seamlessly alongside PDF libraries (`package:pdf/widgets.dart`) without confusing PDF canvas text with Flutter UI widgets.
+- **Prefix & Aliased Access**: Enforces policies even when classes are accessed via prefixes (e.g. `Colors.red` or `fl.Colors.red`).
+- **Generated File Skipping**: Automatically ignores `.g.dart`, `.freezed.dart`, `.mocks.dart`, `.gen.dart`, and `.dart_tool`.
+
+---
+
+## 📦 Installation
+
+Add `team_guard` to your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  team_guard: ^1.0.17
+  team_guard: ^1.0.18
 ```
 
-Then run:
+Then fetch packages:
 
 ```bash
-# Flutter project
 flutter pub get
-
-# Dart project
-dart pub get
+# or: dart pub get
 ```
 
-`pub get` downloads the package only. It does not auto-configure your project files.
+---
 
-## Setup (Required)
+## 🛠️ Setup (One Command)
 
-Run one command in your project root:
+Initialize Team Guard in your project:
 
 ```bash
 dart run team_guard:setup
 ```
 
-This command:
-- generates `team_guard.yaml` automatically in the project root (if missing)
-- creates `analysis_options.yaml` if missing
-- adds `custom_lint` plugin under `analyzer.plugins` if missing
-- generates missing replacement files in `lib/core` based on `team_guard.yaml`
-- skips generation when a file with the same name already exists anywhere under `lib/`
-- never overwrites existing files
-- starts `custom_lint`
+This command automatically:
+1. Generates `team_guard.yaml` in your project root (if missing).
+2. Configures `analysis_options.yaml` with the `custom_lint` plugin.
+3. Scaffolds approved starter replacement files in `lib/core` (never overwrites existing files).
+4. Starts live analysis.
 
-If your IDE still does not show lints, restart analysis server/IDE.
+Verify your setup anytime with **Team Guard Doctor**:
 
-## Configuration
+```bash
+dart run team_guard:doctor
+```
 
-After running `dart run team_guard:setup`, you will find `team_guard.yaml` generated in your project root. Edit it as needed:
+```text
+Team Guard Doctor 🩺
+
+[✓] Configuration file (team_guard.yaml)
+    Valid configuration with 7 rule(s) (2 widgets, 4 classes, 1 functions).
+
+[✓] Analysis options (analysis_options.yaml)
+    custom_lint plugin is enabled in analysis_options.yaml.
+
+[✓] Project dependencies (pubspec.yaml)
+    team_guard and custom_lint dependencies found.
+
+[✓] Approved replacements verification
+    All configured replacement classes exist in lib/ or specify explicit imports.
+
+✓ Everything looks great! Team Guard is ready to protect your project.
+```
+
+---
+
+## ⚙️ Configuration (`team_guard.yaml`)
+
+Define your team's forbidden widgets, classes, and functions:
 
 ```yaml
 widgets:
   Text:
     replacement: CustomText
-    # import: package:your_app/widgets/custom_text.dart
+    # Optional explicit import path. If omitted, auto-detected from lib/
+    # import: package:my_app/core/ui/custom_text.dart
     severity: error
+    reason: Always use CustomText to enforce typography scale and localization.
 
   ElevatedButton:
     replacement: AppElevatedButton
-    # import: package:your_app/core/ui/buttons/app_elevated_button.dart
     severity: error
+    reason: Use AppElevatedButton for consistent design system states.
 
 classes:
   Colors:
     replacement: AppColors
-    # import: package:your_app/theme/app_colors.dart
     severity: error
+    reason: Use AppColors to support dark mode and dynamic theme tokens.
 
   Dio:
     replacement: AppDio
-    # import: package:your_app/core/network/app_dio.dart
     severity: error
+    reason: Use AppDio to ensure authentication interceptors and retry policies.
 
   GetIt:
     replacement: AppLocator
-    # import: package:your_app/core/di/app_locator.dart
     severity: error
 
   Cubit:
     replacement: AppCubit
-    # import: package:your_app/core/state/app_cubit.dart
-    severity: error
-```
-
-Full setup example: [`example/team_guard_example.dart`](example/team_guard_example.dart)
-
-Class-name matching is tolerant for separators/case, so values like `GetIt`, `get_it`, or `getit` in config are treated as the same symbol.
-
-### Minimal Policy Example
-
-If you only need a compact setup, use:
-
-```yaml
-widgets:
-  Text:
-    replacement: CustomText
-    severity: error
-  ElevatedButton:
-    replacement: AppElevatedButton
     severity: error
 
-classes:
-  Colors:
-    replacement: AppColors
-    severity: error
-  Dio:
-    replacement: AppDio
-    severity: error
+functions:
+  print:
+    replacement: debugPrint
+    # import: package:flutter/foundation.dart
+    severity: warning
+    reason: Avoid leaking sensitive logs to production stdout.
 ```
 
-When you run `dart run team_guard:setup`, replacement stubs are created automatically in `lib/core` (for example, `CustomText` -> `lib/core/custom_text.dart`) only when no file with the same name already exists anywhere under `lib/`.
+### Configuration Options
 
-If `lib/widgets/custom_text.dart` already exists, Team Guard will not create `lib/core/custom_text.dart`.
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `replacement` | `String` | **(Required)** Approved replacement symbol. |
+| `import` | `String` | *(Optional)* Package import path (e.g. `package:my_app/core/custom_text.dart`). Auto-detected from `lib/` if omitted. |
+| `severity` | `String` | `error` (default) or `warning`. |
+| `reason` | `String` | *(Optional)* Explanation displayed in the diagnostic message. |
 
-If a matching file already exists, Team Guard keeps your current file unchanged.
-To regenerate with the latest template, either edit the file manually or delete/rename it and run `dart run team_guard:setup` again.
+---
 
-### Generated Starter Templates (Flutter projects)
+## 🔄 Automated Bulk Migration (`dart run team_guard:migrate`)
 
-For text-like replacement names (contains `text`), Team Guard generates a starter similar to:
-
-```dart
-import 'package:flutter/widgets.dart';
-
-class CustomText extends StatelessWidget {
-  const CustomText({super.key, required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-    );
-  }
-}
-```
-
-For color-like replacement names (contains `color`), Team Guard generates a starter similar to:
-
-```dart
-import 'package:flutter/material.dart';
-
-class AppColors {
-  const AppColors._();
-
-  static const Color primary = Color(0xFF6200EE);
-  static const Color primaryVariant = Color(0xFF3700B3);
-  static const Color secondary = Color(0xFF03DAC6);
-  static const Color secondaryVariant = Color(0xFF018786);
-  static const Color onError = Color(0xFFFFFFFF);
-  static const Color text = Color(0xFF000000);
-  static const Color overlay = Color.fromARGB(5, 2, 4, 5);
-}
-```
-
-Usage example when an API requires `Color`:
-
-```dart
-colorScheme: ColorScheme.fromSeed(
-  seedColor: AppColors.primary,
-),
-```
-
-### Import Field Format
-
-`import` in `team_guard.yaml` is optional.
-
-- If provided, Team Guard uses it directly for quick-fix auto-import.
-- If omitted, Team Guard tries to auto-detect the import from your `lib/` folder when the replacement class exists in exactly one file.
-
-Correct:
-
-```yaml
-import: package:your_app/widgets/custom_text.dart
-```
-
-or
-
-```yaml
-import: "package:your_app/widgets/custom_text.dart"
-```
-
-Also accepted:
-
-```yaml
-import: "import 'package:your_app/widgets/custom_text.dart';"
-```
-
-### Severity Values
-
-- `warning`
-- `error`
-
-Use `error` if you want violations to appear as red errors in IDE problems.
-
-## Example Violation
-
-If `Text` is restricted:
-
-```dart
-Text('Hello');
-```
-
-You will get a lint message suggesting `CustomText` instead.
-
-## Troubleshooting
-
-### Lints appear in terminal but not in IDE
-
-1. Confirm `analysis_options.yaml` contains:
-
-```yaml
-analyzer:
-  plugins:
-    - custom_lint
-```
-
-2. Install IDE plugin `Custom Lint`.
-3. Restart analysis:
-   - VS Code: `Dart: Restart Analysis Server`
-   - Android Studio/IntelliJ: restart IDE
-4. Check Problems filter is not set to errors-only if your rules are `warning`.
-
-### `team_guard.yaml` was not generated
-
-- Run `dart run team_guard:setup` from the project root.
-- If still missing, create `team_guard.yaml` manually using the example above.
-
-## To Uninstall
+Got an existing codebase with hundreds of `Text` or `print` violations? Migrate them all automatically:
 
 ```bash
-flutter pub remove team_guard
+# Preview what would be updated without writing to disk:
+dart run team_guard:migrate --dry-run
+
+# Apply all replacements across your project:
+dart run team_guard:migrate
 ```
 
-## Additional Information
+**Output:**
 
-- Package: https://pub.dev/packages/team_guard
-- custom_lint docs: https://pub.dev/packages/custom_lint
-- Issues and contributions: https://github.com/HazemHamdy7/team_guard
+```text
+Running Team Guard automated migration...
+
+  [Migrated] Updated: lib/features/home/presentation.dart
+  [Migrated] Updated: lib/features/profile/view.dart
+  [Migrated] Updated: lib/core/network/api_client.dart
+
+✓ Migration complete! 3 file(s) updated with 12 edits.
+Tip: Run "dart format ." to format updated files.
+```
+
+---
+
+## 💡 IDE Experience & Quick Fixes
+
+When writing code in VS Code or Android Studio / IntelliJ:
+
+1. **Live Highlights**: Violations appear with clear problem messages including the policy reason:
+   > *The widget "Text" is restricted by team policy: Always use CustomText to enforce typography scale and localization. Use "CustomText" instead. (Quick Fix available)*
+2. **Single Quick Fix**: Press `Cmd + .` (macOS) or `Alt + Enter` (Windows/Linux) and select **Use CustomText**.
+3. **Batch Quick Fix**: Select **Fix all forbidden widgets in this file** to update every forbidden widget in the current file in one click.
+
+---
+
+## 🧰 CLI Commands Reference
+
+| Command | Description |
+| :--- | :--- |
+| `dart run team_guard:check` | Scan files and print formatted ASCII violation table (first post-install step). |
+| `dart run team_guard:migrate` | Bulk migrate all violations to approved replacements across the codebase. |
+| `dart run team_guard:migrate --dry-run` | Preview files that would be modified without touching disk. |
+| `dart run team_guard:doctor` | Validate setup, configuration syntax, dependencies, and replacement files. |
+| `dart run team_guard:init` | Create `team_guard.yaml` and configure `analysis_options.yaml`. |
+| `dart run team_guard:setup` | Run init and launch `custom_lint`. |
+
+*(Note: You can also use the shorthand router `dart run team_guard check`, `dart run team_guard migrate`, etc.)*
+
+---
+
+## 🔍 Troubleshooting
+
+### Lints do not appear in IDE
+1. Verify `analysis_options.yaml` contains:
+   ```yaml
+   analyzer:
+     plugins:
+       - custom_lint
+   ```
+2. Verify you have the **Custom Lint** extension installed in VS Code or IntelliJ / Android Studio.
+3. Restart analysis server:
+   - VS Code: `Command Palette` -> `Dart: Restart Analysis Server`.
+   - Android Studio / IntelliJ: `File` -> `Repair IDE` or restart.
+4. Run `dart run team_guard:doctor` to pinpoint the exact issue.
+
+---
+
+## 📄 License & Links
+
+- Pub Package: [pub.dev/packages/team_guard](https://pub.dev/packages/team_guard)
+- Repository: [github.com/HazemHamdy7/team_guard](https://github.com/HazemHamdy7/team_guard)
