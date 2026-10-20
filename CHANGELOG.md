@@ -1,3 +1,7 @@
+## 1.0.19
+
+- Refactor and streamline README documentation structure on pub.dev, prioritizing setup and installation upfront, followed by detailed feature workflows and CLI guides.
+
 ## 1.0.18
 
 - **Fast Inspection CLI (`dart run team_guard:check`)**: Instantly audit the entire codebase and print a formatted ASCII table of forbidden elements, lines, approved replacements, and severity levels.

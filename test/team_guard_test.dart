@@ -848,7 +848,7 @@ environment:
   sdk: ">=3.0.0 <4.0.0"
 dev_dependencies:
   custom_lint: ^0.8.1
-  team_guard: ^1.0.18
+  team_guard: ^1.0.19
 ''');
 
       // Create replacement classes in lib/core
